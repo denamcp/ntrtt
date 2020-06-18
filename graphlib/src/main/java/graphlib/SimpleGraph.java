@@ -1,6 +1,5 @@
 package graphlib;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -9,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * User: Denis_Ivanov
@@ -17,7 +17,7 @@ import java.util.Set;
  */
 public class SimpleGraph<T> implements Graph<T> {
 
-    final Map<T, List<Edge<T>>> vertexToEdges = new HashMap<>();
+    final Map<T, Queue<Edge<T>>> vertexToEdges = new HashMap<>();
 
     @Override
     public void addVertex(T userObject) {
@@ -25,7 +25,7 @@ public class SimpleGraph<T> implements Graph<T> {
             return;
         }
         synchronized (vertexToEdges) {
-            vertexToEdges.putIfAbsent(userObject, new ArrayList<>());
+            vertexToEdges.putIfAbsent(userObject, new ConcurrentLinkedQueue<>());
         }
     }
 
@@ -118,7 +118,7 @@ public class SimpleGraph<T> implements Graph<T> {
 
         while (queue.size() != 0) {
             final T vertex = queue.poll();
-            final List<Edge<T>> edges;
+            final Queue<Edge<T>> edges;
             synchronized (vertexToEdges) {
                 edges = vertexToEdges.get(vertex);
             }
@@ -153,12 +153,12 @@ public class SimpleGraph<T> implements Graph<T> {
             if (start.equals(currentVertex)) {
                 break;
             }
-            List<Edge<T>> edges = backPaths.getVertexToEdges().get(currentVertex);
+            Queue<Edge<T>> edges = backPaths.getVertexToEdges().get(currentVertex);
             if (edges == null || edges.size() != 1) {
                 throw new BadBackGraphException("Back graph edge contains wrong number of edges: " +
                         (edges == null ? 0 : edges.size()));
             }
-            Edge<T> backEdge = edges.get(0);
+            Edge<T> backEdge = edges.poll();
             result.add(new SimpleEdge<>(backEdge.getTo(), backEdge.getFrom()));
             currentVertex = backEdge.getTo();
             infinitePreventer++;
@@ -167,7 +167,7 @@ public class SimpleGraph<T> implements Graph<T> {
         return result;
     }
 
-    private Map<T, List<Edge<T>>> getVertexToEdges() {
+    private Map<T, Queue<Edge<T>>> getVertexToEdges() {
         return vertexToEdges;
     }
 }
